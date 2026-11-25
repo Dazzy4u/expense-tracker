@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<style>
+  :root {
+    --bg: #f6f7f3; --card: #ffffff; --ink: #1c2b2d; --muted: #66767a;
+    --line: #dde3df; --accent: #0f6b63; --accent-ink: #ffffff; --danger: #b3382c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121a1b; --card: #1a2526; --ink: #e8efec; --muted: #93a5a8;
+      --line: #2b3a3b; --accent: #4fbfb3; --accent-ink: #0b1415; --danger: #ef7d70;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 1.5rem; margin: 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 16px; }
+  .total { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 4px 0 0; }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  form .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 10px; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button {
+    font: inherit; cursor: pointer; border: 0; border-radius: 8px; padding: 10px 16px;
+    background: var(--accent); color: var(--accent-ink); font-weight: 600;
+  }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+  button.del { background: transparent; color: var(--danger); padding: 4px 8px; font-weight: 500; }
+  .bars { display: grid; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; font-size: 0.9rem; }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  li:first-child { border-top: 0; }
+  .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .empty { text-align: center; padding: 20px 0; color: var(--muted); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .row > div { flex: 1; min-width: 130px; }
+  @media (max-width: 480px) { form { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 80px 1fr auto; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Expense Tracker</h1>
+    <div style="min-width:90px">
+      <label for="currency" class="muted" style="margin:0">Currency</label>
+      <select id="currency">
+        <option value="₹">₹ INR</option>
+        <option value="$">$ USD</option>
+        <option value="€">€ EUR</option>
+        <option value="£">£ GBP</option>
+      </select>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="row">
+      <div>
+        <label for="month">Month</label>
+        <input type="month" id="month">
+      </div>
+      <div>
+        <label for="filterCat">Category</label>
+        <select id="filterCat"></select>
+      </div>
+    </div>
+    <p class="muted" style="margin:16px 0 0">Total spent</p>
+    <p class="total" id="total">0</p>
+  </section>
+
+  <section class="card">
+    <h2>Add an expense</h2>
+    <form id="form">
+      <div class="full">
+        <label for="title">What did you buy?</label>
+        <input id="title" required maxlength="60" placeholder="Lunch, bus ticket, groceries…">
+      </div>
+      <div>
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" min="0.01" step="0.01" required placeholder="0.00">
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category"></select>
+      </div>
+      <div>
+        <label for="date">Date</label>
+        <input id="date" type="date" required>
+      </div>
+      <div style="align-self:end"><button type="submit" style="width:100%">Add expense</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Where your money went</h2>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0">Expenses</h2>
+      <div style="flex:0">
+        <button class="ghost" id="export" type="button">Download CSV</button>
+      </div>
+    </div>
+    <ul id="list"></ul>
+  </section>
+</main>
+
+<script>
+  // ---------- 1. Setup ----------
+  const CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Fun", "Health", "Other"];
+  const KEY = "expense-tracker-data";   // name used to save data in the browser
+  const CUR_KEY = "expense-tracker-currency";
+
+  const $ = (id) => document.getElementById(id);
+  let expenses = load();                // our list of expenses
+
+  // ---------- 2. Saving and loading (localStorage) ----------
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(expenses)); } catch (e) {}
+  }
+
+  // ---------- 3. Helpers ----------
+  const today = () => new Date().toISOString().slice(0, 10);
+  function money(n) {
+    return $("currency").value + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // fill dropdowns
+  CATEGORIES.forEach((c) => $("category").add(new Option(c, c)));
+  $("filterCat").add(new Option("All categories", "all"));
+  CATEGORIES.forEach((c) => $("filterCat").add(new Option(c, c)));
+
+  // starting values
+  $("date").value = today();
+  $("month").value = today().slice(0, 7);
+  try { $("currency").value = localStorage.getItem(CUR_KEY) || "₹"; } catch (e) {}
+
+  // ---------- 4. Show everything on screen ----------
+  function render() {
+    const month = $("month").value;
+    const cat = $("filterCat").value;
+
+    const shown = expenses
+      .filter((e) => (!month || e.date.startsWith(month)) && (cat === "all" || e.category === cat))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    // total
+    const total = shown.reduce((sum, e) => sum + e.amount, 0);
+    $("total").textContent = money(total);
+
+    // category bars
+    const bars = $("bars");
+    bars.textContent = "";
+    const byCat = {};
+    shown.forEach((e) => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+    const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      bars.innerHTML = '<div class="empty">Nothing here yet. Add your first expense above.</div>';
+    }
+    entries.forEach(([name, value]) => {
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      const label = document.createElement("span"); label.textContent = name;
+      const bar = document.createElement("div"); bar.className = "bar";
+      const fill = document.createElement("span"); fill.style.width = (value / total * 100) + "%";
+      bar.appendChild(fill);
+      const amt = document.createElement("span"); amt.className = "amt"; amt.textContent = money(value);
+      row.append(label, bar, amt);
+      bars.appendChild(row);
+    });
+
+    // list
+    const list = $("list");
+    list.textContent = "";
+    if (!shown.length) {
+      list.innerHTML = '<li class="empty" style="display:block">No expenses for this month.</li>';
+    }
+    shown.forEach((e) => {
+      const li = document.createElement("li");
+      const info = document.createElement("div");
+      const t = document.createElement("div"); t.textContent = e.title;
+      const m = document.createElement("div"); m.className = "muted"; m.textContent = e.category + " · " + e.date;
+      info.append(t, m);
+      const amt = document.createElement("span"); amt.className = "amt"; amt.textContent = money(e.amount);
+      const del = document.createElement("button");
+      del.className = "del"; del.type = "button"; del.textContent = "Delete";
+      del.setAttribute("aria-label", "Delete " + e.title);
+      del.onclick = () => { expenses = expenses.filter((x) => x.id !== e.id); save(); render(); };
+      li.append(info, amt, del);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- 5. Adding an expense ----------
+  $("form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    expenses.push({
+      id: Date.now(),
+      title: $("title").value.trim(),
+      amount: parseFloat($("amount").value),
+      category: $("category").value,
+      date: $("date").value,
+    });
+    save();
+    $("title").value = "";
+    $("amount").value = "";
+    $("month").value = $("date").value.slice(0, 7); // jump to the month just added
+    render();
+    $("title").focus();
+  });
+
+  // ---------- 6. Download as CSV (opens in Excel / Google Sheets) ----------
+  $("export").onclick = () => {
+    const lines = ["Date,Title,Category,Amount"].concat(
+      expenses.map((e) => [e.date, '"' + e.title.replace(/"/g, '""') + '"', e.category, e.amount].join(","))
+    );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "expenses.csv";
+    a.click();
+  };
+
+  // ---------- 7. Re-draw when filters change ----------
+  $("month").onchange = render;
+  $("filterCat").onchange = render;
+  $("currency").onchange = () => {
+    try { localStorage.setItem(CUR_KEY, $("currency").value); } catch (e) {}
+    render();
+  };
+
+  render();
+</script>
+</body>
+</html>
